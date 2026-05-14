@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project Overview | Cloud-Run Code Docs</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="container">
+<aside class="sidebar">
+<div class="sidebar-brand"><div class="logo">IR</div><h2>Cloud-Run Docs</h2></div>
+<ul>
+<div class="section-label">Overview</div>
+<li><a href="index.html" class="active"><span class="icon">📊</span>Project Overview</a></li>
+<div class="section-label">Application Layer</div>
+<li><a href="main.html" ><span class="icon">🚀</span>main.py</a></li>
+<li><a href="orchestrator.html" ><span class="icon">⚙️</span>orchestrator.py</a></li>
+<div class="section-label">AI / ML Layer</div>
+<li><a href="claude_client.html" ><span class="icon">🤖</span>claude_client.py</a></li>
+<li><a href="vertex.html" ><span class="icon">🔍</span>vertex_client.py</a></li>
+<div class="section-label">Data Layer</div>
+<li><a href="firestore.html" ><span class="icon">🗄️</span>firestore_client.py</a></li>
+<li><a href="session.html" ><span class="icon">⚡</span>session_store.py</a></li>
+<li><a href="redis.html" ><span class="icon">📡</span>redis_broadcast.py</a></li>
+<div class="section-label">Infrastructure</div>
+<li><a href="config.html" ><span class="icon">🔧</span>config.py</a></li>
+<li><a href="test.html" ><span class="icon">🧪</span>test_local.py</a></li>
+</ul>
+<div class="back"><a href="index.html">← Back to Overview</a></div>
+</aside>
+<main class="main">
+<h1>Inovi AI Scoping Agent</h1>
+<div class="hero"><p><span class="badge">Cloud-Run</span>Real-time requirement extraction pipeline for Accounting Seed scoping calls</p></div>
+
+<h2>Architecture Overview</h2>
+<div class="arch"><pre><span class="hl">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="hl">│                    INOVI AI SCOPING AGENT                       │</span>
+<span class="hl">│                    Cloud-Run Architecture                       │</span>
+<span class="hl">└─────────────────────────────────────────────────────────────────┘</span>
+
+  <span class="hl">┌──────────────┐</span>      <span class="arrow">webhook POST</span>      <span class="hl">┌──────────────────┐</span>
+  <span class="hl">│  Recall.ai   │</span> ──────────────────────▶ <span class="hl">│    main.py       │</span>
+  <span class="hl">│  Bot API     │</span>      transcript.data   <span class="hl">│  Flask Router    │</span>
+  <span class="hl">└──────────────┘</span>                         <span class="hl">└────────┬─────────┘</span>
+        │                                           │
+        │ create bot                                │ process_utterance()
+        ▼                                           ▼
+  <span class="hl">┌──────────────┐</span>                         <span class="hl">┌──────────────────┐</span>
+  <span class="hl">│  Meeting     │</span>                         <span class="hl">│  orchestrator.py │</span>
+  <span class="hl">│  (GMeet/Zoom)│</span>                         <span class="hl">│  11-Step Pipeline│</span>
+  <span class="hl">└──────────────┘</span>                         <span class="hl">└───┬───┬───┬───┬──┘</span>
+                                                 │   │   │   │
+                    ┌────────────────────────────┘   │   │   └──────────────┐
+                    ▼                                ▼   │                  ▼
+  <span class="hl">┌────────────────────────┐</span>   <span class="hl">┌────────────────────┐</span>  │  <span class="hl">┌───────────────────────┐</span>
+  <span class="hl">│  session_store.py      │</span>   <span class="hl">│  vertex_client.py  │</span>  │  <span class="hl">│  firestore_client.py  │</span>
+  <span class="hl">│  Redis Ephemeral State │</span>   <span class="hl">│  Vertex AI RAG     │</span>  │  <span class="hl">│  Permanent Storage    │</span>
+  <span class="hl">└────────────┬───────────┘</span>   <span class="hl">└─────────┬──────────┘</span>  │  <span class="hl">└───────────┬───────────┘</span>
+               │                        │              │              │
+               │ pub/sub                │ KB context   │              │
+               ▼                        ▼              │              ▼
+  <span class="hl">┌────────────────────────┐</span>   <span class="hl">┌────────────────────┐</span>  │  <span class="hl">┌───────────────────────┐</span>
+  <span class="hl">│  redis_broadcast.py    │</span>   <span class="hl">│  claude_client.py  │◀─┘  <span class="hl">│  GCP Firestore        │</span>
+  <span class="hl">│  SSE → React Panel     │</span>   <span class="hl">│  Anthropic Claude  │</span>     <span class="hl">└───────────────────────┘</span>
+  <span class="hl">└────────────────────────┘</span>   <span class="hl">└────────────────────┘</span>
+               │
+               ▼ SSE
+  <span class="hl">┌────────────────────────┐</span>
+  <span class="hl">│  React Dashboard Panel │</span>
+  <span class="hl">│  • Live requirements   │</span>
+  <span class="hl">│  • Session status      │</span>
+  <span class="hl">│  • Post-call review    │</span>
+  <span class="hl">└────────────────────────┘</span></pre></div>
+
+<h2>How It Works</h2>
+<div class="info-box">
+<strong>1.</strong> A consultant starts a scoping session via the React panel → <code>main.py</code> creates a Recall.ai bot.<br>
+<strong>2.</strong> The bot joins the meeting and streams transcripts to <code>POST /webhook/recall</code>.<br>
+<strong>3.</strong> Each utterance flows through the <code>orchestrator.py</code> pipeline:<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Filter noise (filler words, short utterances)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Retrieve relevant KB chunks via <code>vertex_client.py</code> (RAG)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Extract structured requirements via <code>claude_client.py</code> (Claude Sonnet)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Apply hallucination guardrails (KB grounding, module scope, confidence floor)<br>
+&nbsp;&nbsp;&nbsp;&nbsp;• Persist to Firestore and broadcast to the React panel via Redis → SSE<br>
+<strong>4.</strong> When the call ends, the session is marked complete and the post-call review screen appears.
+</div>
+
+<div class="info-box warn">
+<strong>Three Agentic Fixes:</strong><br>
+<strong>Fix 1 — Rolling Summary:</strong> Compresses older utterances every N utterances to keep the context window bounded.<br>
+<strong>Fix 2 — Semantic Chunking:</strong> Filters filler words before calling Claude, reducing API calls by ~30%.<br>
+<strong>Fix 3 — Hallucination Guardrails:</strong> Three independent checks catch Claude's false extractions.
+</div>
+
+<h2>File Index</h2>
+<div class="cards"><a class="card" href="main.html"><span class="tag entry">entry</span><h3>main.py — Flask App & Webhook Router</h3><p>HTTP routes, Recall.ai bot creation, webhook handlers, SSE stream endpoint.</p></a>
+<a class="card" href="orchestrator.html"><span class="tag pipeline">pipeline</span><h3>orchestrator.py — 11-Step Processing Pipeline</h3><p>Parse payload → filter noise → KB retrieval → Claude extraction → guardrails → persist & broadcast.</p></a>
+<a class="card" href="claude_client.html"><span class="tag ai">ai</span><h3>claude_client.py — Claude API Client</h3><p>Prompt building (5 sections), Sonnet for extraction, Haiku for summarisation, JSON parsing & validation.</p></a>
+<a class="card" href="vertex.html"><span class="tag ai">ai</span><h3>vertex_client.py — Vertex AI RAG Retrieval</h3><p>Text embedding, Vector Search queries, module-based chunk filtering, context formatting.</p></a>
+<a class="card" href="firestore.html"><span class="tag storage">storage</span><h3>firestore_client.py — Firestore Persistence</h3><p>Permanent storage for sessions, utterances, and requirements with atomic counters.</p></a>
+<a class="card" href="session.html"><span class="tag storage">storage</span><h3>session_store.py — Redis Session Store</h3><p>Ephemeral session state, utterance sliding window, rolling summaries, bot ID reverse lookup.</p></a>
+<a class="card" href="redis.html"><span class="tag realtime">realtime</span><h3>redis_broadcast.py — Redis Pub/Sub & SSE</h3><p>Real-time event broadcasting to the React dashboard via Server-Sent Events.</p></a>
+<a class="card" href="config.html"><span class="tag pipeline">pipeline</span><h3>config.py — Configuration & Secrets</h3><p>GCP Secret Manager integration, environment variables, application constants.</p></a>
+<a class="card" href="test.html"><span class="tag test">test</span><h3>test_local.py — Local Verification Tests</h3><p>Standalone tests for Redis, Claude, Firestore, and Flask endpoints.</p></a>
+</div>
+
+<h2>Data Flow</h2>
+<div class="info-box success">
+<strong>Incoming:</strong> Recall.ai webhook → <code>main.py</code> → <code>orchestrator.py</code> → <code>vertex_client.py</code> + <code>claude_client.py</code><br>
+<strong>Storage:</strong> <code>session_store.py</code> (Redis, ephemeral) + <code>firestore_client.py</code> (Firestore, permanent)<br>
+<strong>Outgoing:</strong> <code>redis_broadcast.py</code> (Redis pub/sub → SSE → React dashboard)
+</div>
+
+</main>
+</div>
+</body>
+</html>
